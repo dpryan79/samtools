@@ -105,7 +105,15 @@ static inline int heap_lt(const heap1_t a, const heap1_t b)
         int t;
         if (a.b == NULL || b.b == NULL) return a.b == NULL? 1 : 0;
         t = strnum_cmp(bam_get_qname(a.b), bam_get_qname(b.b));
-        return (t > 0 || (t == 0 && (a.b->core.flag&0xc0) > (b.b->core.flag&0xc0)));
+        if(t>0) return 1;
+        uint8_t *p1=bam_aux_get(a.b,"HI");
+        uint8_t *p2=bam_aux_get(b.b, "HI");
+        if(p1 == NULL && p2 == NULL) return (a.b->core.flag&0xc0) > (b.b->core.flag&0xc0);
+        else if(p1 == NULL) return 1;
+        else if(p2 == NULL) return -1;
+        else if(bam_aux2i(p1) == bam_aux2i(p2)) return (a.b->core.flag&0xc0) > (b.b->core.flag&0xc0);
+        else return bam_aux2i(p1)-bam_aux2i(p2);
+        //return (t > 0 || (t == 0 && (a.b->core.flag&0xc0) > (b.b->core.flag&0xc0)));
     } else return __pos_cmp(a, b);
 }
 
@@ -914,7 +922,15 @@ static inline int bam1_lt(const bam1_p a, const bam1_p b)
 {
     if (g_is_by_qname) {
         int t = strnum_cmp(bam_get_qname(a), bam_get_qname(b));
-        return (t < 0 || (t == 0 && (a->core.flag&0xc0) < (b->core.flag&0xc0)));
+        if(t!=0) return t;
+        uint8_t *p1=bam_aux_get(a,"HI");
+        uint8_t *p2=bam_aux_get(b,"HI");
+        if(p1 == NULL && p2 == NULL) return (a->core.flag&0xc0) < (b->core.flag&0xc0);
+        else if(p1 == NULL) return 1;
+        else if(p2 == NULL) return -1;
+        else if(bam_aux2i(p1) == bam_aux2i(p2)) return (a->core.flag&0xc0) < (b->core.flag&0xc0);
+        else return bam_aux2i(p1)<bam_aux2i(p2);
+        //return (t < 0 || (t == 0 && (a->core.flag&0xc0) < (b->core.flag&0xc0)));
     } else return (((uint64_t)a->core.tid<<32|(a->core.pos+1)<<1|bam_is_rev(a)) < ((uint64_t)b->core.tid<<32|(b->core.pos+1)<<1|bam_is_rev(b)));
 }
 KSORT_INIT(sort, bam1_p, bam1_lt)
